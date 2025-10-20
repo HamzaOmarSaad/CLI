@@ -1,3 +1,4 @@
+import java.io.File;
 import java.util.Scanner;
 
 class Parser {
@@ -37,16 +38,17 @@ class Parser {
 
      Parser parser = new Parser();
      Scanner scanner = new Scanner(System.in);
+     File current=new File(System.getProperty("user.dir"));
 
     public String pwd(){
-        return "pwd";
+        return current.getAbsolutePath();
     }
 
     public void cd(String[] args){
-        if (args.length > 0)
-            System.out.println("cd " + args[0]);
-        else
-            System.out.println("No directory specified");
+        if (args.length == 0){
+
+        }
+
     }
 
     public void chooseCommandAction(){
@@ -56,15 +58,14 @@ class Parser {
         if (!parser.parse(input)){
             System.out.println("Invalid command");
         }
+
         if (parser.getCommandName().equals("pwd")){
-            String path = System.getProperty("user.dir");
-            System.out.println("Current working directory: " + path);
+            System.out.println(pwd());
 
         } else if (parser.getCommandName().equals("cd")) {
             cd(parser.getArgs());
 
         } else if (parser.getCommandName().equals("ls")) {
-
 
         } else if (parser.getCommandName().equals("mkdir")) {
 
