@@ -5,14 +5,16 @@ class Parser {
         String[] args;
 
         public boolean parse(String input){
-            if (input.isEmpty()){
+            if (input.isEmpty() || input.trim().isEmpty()){
                 return false;
             }
             String[] in = input.trim().split(" ");
+
             commandName = in[0];
             args = new String[in.length - 1];
+
             for(int i=1; i<in.length;i++){
-                args[i] = in[i];
+                args[i-1] = in[i];
             }
             return  true;
         };
@@ -34,27 +36,54 @@ class Parser {
  class Terminal {
 
      Parser parser = new Parser();
+     Scanner scanner = new Scanner(System.in);
 
     public String pwd(){
         return "pwd";
     }
 
     public void cd(String[] args){
-        System.out.println("cd");
+        if (args.length > 0)
+            System.out.println("cd " + args[0]);
+        else
+            System.out.println("No directory specified");
     }
 
     public void chooseCommandAction(){
-
-        Scanner scanner = new Scanner(System.in);
+        System.out.print("> ");
         String input = scanner.nextLine();
-        parser.parse(input);
-
+        ;
+        if (!parser.parse(input)){
+            System.out.println("Invalid command");
+        }
         if (parser.getCommandName().equals("pwd")){
-            System.out.println( pwd());
+            String path = System.getProperty("user.dir");
+            System.out.println("Current working directory: " + path);
+
         } else if (parser.getCommandName().equals("cd")) {
             cd(parser.getArgs());
 
+        } else if (parser.getCommandName().equals("ls")) {
+
+
+        } else if (parser.getCommandName().equals("mkdir")) {
+
+        } else if (parser.getCommandName().equals("rmkdir")) {
+
+        } else if (parser.getCommandName().equals("touch")) {
+
+        } else if (parser.getCommandName().equals("rm")) {
+
+        } else if (parser.getCommandName().equals("cat")) {
+
+        } else if (parser.getCommandName().equals("wc")) {
+
+        } else if (parser.getCommandName().equals("cp")) {
+
+        } else if (parser.getCommandName().equals(">")) {
+
         } else if (parser.getCommandName().equals("exit")){
+            System.out.println("Bye");
             System.exit(0);
 
         }
