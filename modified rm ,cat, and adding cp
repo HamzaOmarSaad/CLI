@@ -94,11 +94,11 @@ class Terminal {
 		   System.out.println("cp must followed by 2 filenames");
 	   } else {
 		   File Sourcefile=new File(arguments[0]);
-		   Path Sourcepath=current.toPath().resolve(Sourcefile.toString());
+		   Path Sourcepath=current.toPath().resolve(arguments[0]);
 		   if(Files.exists(Sourcepath)) {
 			   File targetfile=new File(arguments[1]);
-			   Path targetpath=current.toPath().resolve(targetfile.toString());
-			   if(Files.exists(targetpath)) {
+			   Path targetpath=current.toPath().resolve(arguments[1]);
+			 
 				   try (BufferedReader br = new BufferedReader(new FileReader(Sourcepath.toFile()));
 						BufferedWriter bw = new BufferedWriter(new FileWriter(targetpath.toFile()))) {
 
@@ -108,16 +108,13 @@ class Terminal {
 						        bw.newLine(); 
 						    }
 
-						} catch (IOException e) {
+					} catch (IOException e) {
 						    System.out.println("Error in copy");
-						}
-
-			   } else {
-				   System.out.println("The target file doesnot exist");
-			   }
+					  }
+		
 		   } else {
-			 System.out.println("the source file doesnot exist");  
-		   }
+			   	System.out.println("the source file doesnot exist");  
+		   	 }
 	   }
    }
 
