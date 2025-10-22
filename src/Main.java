@@ -1,6 +1,7 @@
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.Arrays;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
@@ -77,22 +78,25 @@ class Parser {
     }
 
      public void ls() {
-         File[] files = current.listFiles();
-//         if(parser.getArgs()[0].equals(">")){
-//
-//         } else if(parser.getArgs()[0].equals(">>")){
-//
-//         }
-             if (files != null) {
-                 for (File f : files) {
-                     if (f.isDirectory()){
-                         System.out.println(" _<DIR> " + f.getName());
-                     }
-                     else System.out.println("______ " + f.getName());
-                 }
-             }
 
+         File[] files = current.listFiles();
+
+         if (files == null || files.length == 0) {
+             System.out.println("Directory is empty");
+             return;
+         }
+
+         Arrays.sort(files, (f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName()));
+
+         for (File file : files) {
+             if (file.isDirectory()) {
+                 System.out.println("[DIR]  " + file.getName());
+             } else {
+                 System.out.println("       " + file.getName());
+             }
+         }
      }
+
 
      public void mkdir(String[] args) {
          if (args.length == 0) {
@@ -116,8 +120,6 @@ class Parser {
              }
          }
      }
-
-
 
      public void rm(String filename) throws IOException {
          Path filePath = current.toPath().resolve(filename);
