@@ -1,0 +1,181 @@
+package CLI;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.List;
+import java.util.Scanner;
+class Parser {
+    String commandName;
+    String[] args;
+
+    public boolean parse(String input){
+        if (input.isEmpty() || input.trim().isEmpty()){
+            return false;
+        }
+        String[] in = input.trim().split(" ");
+
+        commandName = in[0];
+        args = new String[in.length - 1];
+
+        for(int i=1; i<in.length;i++){
+            args[i-1] = in[i];
+        }
+        return  true;
+    };
+
+    public String getCommandName(){
+        return commandName;
+    }
+
+    public String[] getArgs(){
+        if (args == null){
+            return new String[0];
+        }
+
+        return args;
+    };
+}
+class Terminal {
+
+    Parser parser = new Parser();
+    Scanner scanner = new Scanner(System.in);
+    File current=new File(System.getProperty("user.dir"));
+
+   public String pwd(){
+       return current.getAbsolutePath();
+   }
+
+   public void cd(String[] args){
+       if (args.length == 0){
+
+       }
+   }
+   public void rm(String filename) {
+    	    Path filePath = current.toPath().resolve(filename);
+    	    if(Files.exists(filePath)) {
+    	         Files.deleteIfExists(filePath);
+    	         System.out.println("File deleted successfully");
+    	    } else {
+    	         System.out.println("File doesn't exist");
+    	      }     
+    }
+   public void cat(String[] arguments) {
+    	if(arguments.length==0) {
+    		System.out.println("There is no any filename");
+    	} else if (arguments.length>2) {
+    		System.out.println("cat must take 1 or 2 arguments");
+    	} else {
+    		for(String filename:arguments) {
+    			Path filepath=current.toPath().resolve(filename);
+    			if(!Files.exists(filepath)) {
+    		        System.out.println("file " + filename + " does not exist");
+    		        continue;
+    		    }
+    			else {
+    			     try (BufferedReader br = new BufferedReader(new FileReader(filepath.toFile()))) {
+    			            String line;
+    			            while ((line = br.readLine()) != null) {
+    			                System.out.println(line);
+    			            }
+    			        } catch (IOException e) {
+    			            System.out.println("Error in reading file ");
+    			          }
+    			}		
+    		}
+    	}
+    }
+   public void cp(String[] arguments) {
+	   if(arguments.length!=2) {
+		   System.out.println("cp must followed by 2 filenames");
+	   } else {
+		   File Sourcefile=new File(arguments[0]);
+		   Path Sourcepath=current.toPath().resolve(Sourcefile.toString());
+		   if(Files.exists(Sourcepath)) {
+			   File targetfile=new File(arguments[1]);
+			   Path targetpath=current.toPath().resolve(targetfile.toString());
+			   if(Files.exists(targetpath)) {
+				   try (BufferedReader br = new BufferedReader(new FileReader(Sourcepath.toFile()));
+						BufferedWriter bw = new BufferedWriter(new FileWriter(targetpath.toFile()))) {
+
+						    String line;
+						    while ((line = br.readLine()) != null) {
+						        bw.write(line);
+						        bw.newLine(); 
+						    }
+
+						} catch (IOException e) {
+						    System.out.println("Error in copy");
+						}
+
+			   } else {
+				   System.out.println("The target file doesnot exist");
+			   }
+		   } else {
+			 System.out.println("the source file doesnot exist");  
+		   }
+	   }
+   }
+
+   
+
+   public void chooseCommandAction(){
+       System.out.print("> ");
+       String input = scanner.nextLine();
+       ;
+       if (!parser.parse(input)){
+           System.out.println("Invalid command");
+       }
+
+       if (parser.getCommandName().equals("pwd")){
+           System.out.println(pwd());
+
+       } else if (parser.getCommandName().equals("cd")) {
+           cd(parser.getArgs());
+
+       } else if (parser.getCommandName().equals("ls")) {
+
+       } else if (parser.getCommandName().equals("mkdir")) {
+
+       } else if (parser.getCommandName().equals("rmkdir")) {
+
+       } else if (parser.getCommandName().equals("touch")) {
+
+       } else if (parser.getCommandName().equals("rm")) {
+    	   String[] arguments = parser.getArgs();
+           if (arguments.length == 1) {
+               rm(arguments[0]);
+           } else {
+               System.out.println("error in determining the filename");
+           }
+
+       } else if (parser.getCommandName().equals("cat")) {
+    	   cat(parser.getArgs());
+
+       } else if (parser.getCommandName().equals("wc")) {
+
+       } else if (parser.getCommandName().equals("cp")) {
+    	   cp(parser.getArgs());
+       } else if (parser.getCommandName().equals(">")) {
+
+       } else if (parser.getCommandName().equals("exit")){
+           System.out.println("Bye");
+           System.exit(0);
+
+       }
+       else{
+           System.out.println("Unknown command: " + parser.commandName);
+       }
+   }
+   public static void main(String[] args){
+       Terminal terminal = new Terminal();
+       while(true){
+           terminal.chooseCommandAction();
+       }
+
+   }
+}
