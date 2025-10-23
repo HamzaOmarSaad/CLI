@@ -5,53 +5,60 @@ import java.util.Arrays;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
+import java.util.zip.ZipInputStream;
+
 
 class Parser {
-        String commandName;
-        String[] args;
+    String commandName;
+    String[] args;
 
-        public boolean parse(String input){
-            if (input.isEmpty() || input.trim().isEmpty()){
-                return false;
-            }
-            String[] in = input.trim().split(" ");
-
-            commandName = in[0];
-            args = new String[in.length - 1];
-
-            for(int i=1; i<in.length;i++){
-                args[i-1] = in[i];
-            }
-            return  true;
-        };
-
-        public String getCommandName(){
-
-            return commandName;
+    public boolean parse(String input){
+        if (input.isEmpty() || input.trim().isEmpty()){
+            return false;
         }
+        String[] in = input.trim().split(" ");
 
-        public String[] getArgs(){
-            if (args == null){
-                return new String[0];
-            }
+        commandName = in[0];
+        args = new String[in.length - 1];
 
-            return args;
+        for(int i=1; i<in.length;i++){
+            args[i-1] = in[i];
         }
-;
+        return  true;
+    };
+
+    public String getCommandName(){
+
+        return commandName;
     }
- class Terminal {
 
-     Parser parser = new Parser();
-     Scanner scanner = new Scanner(System.in);
-     File current=new File(System.getProperty("user.dir"));
+    public String[] getArgs(){
+        if (args == null){
+            return new String[0];
+        }
+
+        return args;
+    }
+    ;
+}
+class Terminal {
+
+    Parser parser = new Parser();
+    Scanner scanner = new Scanner(System.in);
+    File current=new File(System.getProperty("user.dir"));
 
     public String pwd(){
-        // code for applying the > operator
-//        if(parser.getArgs()[0].equals(">")){
-//
-//        } else if(parser.getArgs()[0].equals(">>")){
-//
-//        }
+
+        if(parser.getArgs()[0].equals(">")){
+            File newdir = new File(current,parser.getArgs()[1]);
+            writeInFile( new String[]{ current.getAbsolutePath()},newdir );
+
+
+        } else if(parser.getArgs()[0].equals(">>")){
+            File newdir = new File(current,parser.getArgs()[1]);
+            appendToFile( new String[]{ current.getAbsolutePath()},newdir );
+
+        }
         return current.getAbsolutePath();
 
     }
@@ -77,222 +84,377 @@ class Parser {
         }
     }
 
-     public void ls() {
+    public void ls() {
 
-         File[] files = current.listFiles();
+        File[] files = current.listFiles();
 
-         if (files == null || files.length == 0) {
-             System.out.println("Directory is empty");
-             return;
-         }
+        if (files == null || files.length == 0) {
+            System.out.println("Directory is empty");
+            return;
+        }
 
-         Arrays.sort(files, (f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName()));
+        Arrays.sort(files, (f1, f2) -> f1.getName().compareToIgnoreCase(f2.getName()));
 
-         for (File file : files) {
-             if (file.isDirectory()) {
-                 System.out.println("[DIR]  " + file.getName());
-             } else {
-                 System.out.println("       " + file.getName());
-             }
-         }
-     }
+        String [] res = new String[files.length] ;
+        for (int i = 0; i < files.length; i++) {
+            if (files[i].isDirectory()) {
+                System.out.println("[DIR]  " + files[i].getName());
+                res[i]=("[DIR]  " + files[i].getName()) ;
 
-
-     public void mkdir(String[] args) {
-         if (args.length == 0) {
-             System.out.println("No directory name provided");
-             return;
-         }
-         for (String arg : args) {
-             File newdir = new File(arg);
-
-             if (!newdir.isAbsolute()) {
-                 newdir = new File(current, arg);
-             }
-
-             if (newdir.mkdirs()) {
-                 System.out.println("Directory created: " + newdir.getAbsolutePath());
-             }
-             else if (newdir.exists()) {
-                 System.out.println("Directory already exists: ");
-             } else {
-                 System.out.println("Failed to create directory: ");
-             }
-         }
-     }
-
-     public void rm(String filename) throws IOException {
-         Path filePath = current.toPath().resolve(filename);
-         if(Files.exists(filePath)) {
-             Files.deleteIfExists(filePath);
-             System.out.println("File deleted successfully");
-         } else {
-             System.out.println("File doesn't exist");
-         }
-     }
-
-     public void cat(String[] arguments) {
-         if(arguments.length==0) {
-             System.out.println("There is no any filename");
-         } else if (arguments.length>2) {
-             System.out.println("cat must take 1 or 2 arguments");
-         } else {
-             for(String filename:arguments) {
-                 Path filepath=current.toPath().resolve(filename);
-                 if(!Files.exists(filepath)) {
-                     System.out.println("file " + filename + " does not exist");
-                     continue;
-                 }
-                 else {
-                     try (BufferedReader br = new BufferedReader(new FileReader(filepath.toFile()))) {
-                         String line;
-                         while ((line = br.readLine()) != null) {
-                             System.out.println(line);
-                         }
-                     } catch (IOException e) {
-                         System.out.println("Error in reading file ");
-                     }
-                 }
-             }
-         }
-     }
-
-     public void cp(String[] arguments) {
-         if(arguments.length!=2) {
-             System.out.println("cp must followed by 2 filenames");
-         } else {
-             File Sourcefile=new File(arguments[0]);
-             Path Sourcepath=current.toPath().resolve(arguments[0]);
-             if(Files.exists(Sourcepath)) {
-                 File targetfile=new File(arguments[1]);
-                 Path targetpath=current.toPath().resolve(arguments[1]);
-
-                 try (BufferedReader br = new BufferedReader(new FileReader(Sourcepath.toFile()));
-                      BufferedWriter bw = new BufferedWriter(new FileWriter(targetpath.toFile()))) {
-
-                     String line;
-                     while ((line = br.readLine()) != null) {
-                         bw.write(line);
-                         bw.newLine();
-                     }
-
-                 } catch (IOException e) {
-                     System.out.println("Error in copy");
-                 }
-
-             } else {
-                 System.out.println("the source file doesnot exist");
-             }
-         }
-     }
+            } else {
+                System.out.println("       " + files[i].getName());
+                res[i]=("       "  + files[i].getName()) ;
+            }
+        }
+        if(parser.getArgs()[0].equals(">")){
+            File newdir = new File(current,parser.getArgs()[1]);
+            writeInFile( res,newdir );
 
 
-     public void wc(String[] arguments) {
-         if(arguments.length == 0) {
-             System.out.println("you must put filename");
-             return;
-         } else if(arguments.length > 1) {
-             System.out.println("wc takes  1 argument");
-             return;
-         }
+        } else if(parser.getArgs()[0].equals(">>")){
+            File newdir = new File(current,parser.getArgs()[1]);
+            appendToFile( res  ,newdir );
 
-         String filename = arguments[0];
-         Path filepath = current.toPath().resolve(filename);
+        }
+    }
 
-         if(!Files.exists(filepath)) {
-             System.out.println("File does not exist: " + filename);
-             return;
-         }
+    public void mkdir(String[] args) {
+        if (args.length == 0) {
+            System.out.println("No directory name provided");
+            return;
+        }
+        for (String arg : args) {
+            File newdir = new File(arg);
 
-         try (BufferedReader br = new BufferedReader(new FileReader(filepath.toFile()))) {
-             int lines = 0;
-             int words = 0;
-             int chars = 0;
-             String line;
+            if (!newdir.isAbsolute()) {
+                newdir = new File(current, arg);
+            }
 
-             while ((line = br.readLine()) != null) {
-                 lines++;
-                 chars += line.length();
+            if (newdir.mkdirs()) {
+                System.out.println("Directory created: " + newdir.getAbsolutePath());
+            }
+            else if (newdir.exists()) {
+                System.out.println("Directory already exists: ");
+            } else {
+                System.out.println("Failed to create directory: ");
+            }
+        }
+    }
+
+    public void rmdir(String[] args) {
+        if (args.length == 0) {
+            System.out.println("no dir is given ");
+            return;
+        }
+        if (args[0].equals("*")) {
+            File[] dirs = current.listFiles();
+            for (File dir : dirs) {
+                if (dir.isDirectory() && dir.list().length == 0) {
+                    dir.delete();
+
+                }
+            }
+        } else {
+            File dir = new File(current, args[0]);
+            if (dir.exists() && dir.isDirectory() ) {
+                dir.delete();
+            }
+            else {
+                System.out.println("Failed to remove directory");
+            }
+        }
+    }
+
+    public void touch(String[] argument) {
+        if(argument.length==0) {
+            System.out.println("touch must take 1 argument");
+        } else if(argument.length>1) {
+            System.out.println("touch must take only 1 argument");
+        } else {
+            Path filepath=current.toPath().resolve(argument[0]);
+            if(Files.exists(filepath)) {
+                System.out.println("the file is already existed");
+            } else {
+                try {
+                    Files.createFile(filepath);
+                    System.out.println("the file "+argument[0]+" created successfully");
+                }
+                catch(IOException e){
+                    System.out.println("Eror during creation");
+                }
+            }
+        }
+    }
+
+    public void rm(String filename)  {
+        Path filePath = current.toPath().resolve(filename);
+        if(Files.exists(filePath)) {
+            try {
+                Files.deleteIfExists(filePath);
+                System.out.println("File deleted successfully");
+            }
+            catch(IOException e) {
+                System.out.println("Eror during deletion");
+            }
+
+        } else {
+            System.out.println("File doesn't exist");
+        }
+    }
+
+    public void cat(String[] arguments) {
+        if(arguments.length==0) {
+            System.out.println("There is no any filename");
+        } else if (arguments.length>2) {
+            System.out.println("cat must take 1 or 2 arguments");
+        } else {
+            for(String filename:arguments) {
+                Path filepath=current.toPath().resolve(filename);
+                if(!Files.exists(filepath)) {
+                    System.out.println("file " + filename + " does not exist");
+                    continue;
+                }
+                else {
+                    try (BufferedReader br = new BufferedReader(new FileReader(filepath.toFile()))) {
+                        String line;
+                        while ((line = br.readLine()) != null) {
+                            System.out.println(line);
+                        }
+                    } catch (IOException e) {
+                        System.out.println("Error in reading file ");
+                    }
+                }
+            }
+        }
+    }
+
+    public void cp(String[] arguments) {
+        if(arguments.length!=2) {
+            System.out.println("cp must followed by 2 filenames");
+        } else {
+            File Sourcefile=new File(arguments[0]);
+            Path Sourcepath=current.toPath().resolve(arguments[0]).normalize();
+            if(Files.exists(Sourcepath)) {
+                File targetfile=new File(arguments[1]);
+                Path targetpath=current.toPath().resolve(arguments[1]).normalize();
+
+                try (BufferedReader br = Files.newBufferedReader(Sourcepath);
+                     BufferedWriter bw = Files.newBufferedWriter(targetpath)) {
+
+                    String line;
+                    while ((line = br.readLine()) != null) {
+                        bw.write(line);
+                        bw.newLine();
+                    }
+
+                } catch (IOException e) {
+                    System.out.println("Error in copy");
+                }
+
+            } else {
+                System.out.println("the source file doesn't exist");
+            }
+        }
+    }
+
+    public void wc(String[] arguments) {
+        if(arguments.length == 0) {
+            System.out.println("you must put filename");
+            return;
+        } else if(arguments.length > 1) {
+            System.out.println("wc takes  1 argument");
+            return;
+        }
+
+        String filename = arguments[0];
+        Path filepath = current.toPath().resolve(filename);
+
+        if(!Files.exists(filepath)) {
+            System.out.println("File does not exist: " + filename);
+            return;
+        }
+
+        try (BufferedReader br = new BufferedReader(new FileReader(filepath.toFile()))) {
+            int lines = 0;
+            int words = 0;
+            int chars = 0;
+            String line;
+
+            while ((line = br.readLine()) != null) {
+                lines++;
+                chars += line.length();
 
 
-                 if (lines > 1) {
-                     chars++;
-                 }
+                if (lines > 1) {
+                    chars++;
+                }
 
 
-                 String trimmed = line.trim();
-                 if (!trimmed.isEmpty()) {
-                     String[] wordArray = trimmed.split("\\s+");
-                     words += wordArray.length;
-                 }
-             }
+                String trimmed = line.trim();
+                if (!trimmed.isEmpty()) {
+                    String[] wordArray = trimmed.split("\\s+");
+                    words += wordArray.length;
+                }
+            }
 
 
-             System.out.println(lines + " " + words + " " + chars + " " + filename);
+            System.out.println(lines + " " + words + " " + chars + " " + filename);
 
-         } catch (IOException e) {
-             System.out.println("Error reading file: " + e.getMessage());
-         }
-     }
+        } catch (IOException e) {
+            System.out.println("Error reading file: " + e.getMessage());
+        }
+    }
 
-     public void zip(String[] arguments) {
-         if(arguments.length < 2) {
-             System.out.println("zip requires at least 2 arguments: zip file.zip file1 file2");
-             return;
-         }
+    public void zip(String[] arguments) {
+        if(arguments.length < 2) {
+            System.out.println("zip requires at least 2 arguments: zip file.zip file1 file2");
+            return;
+        }
 
-         String zipFileName = arguments[0];
-         if(!zipFileName.endsWith(".zip")) {
-             zipFileName += ".zip";
-         }
+        String zipFileName = arguments[0];
+        if(!zipFileName.endsWith(".zip")) {
+            zipFileName += ".zip";
+        }
 
-         Path zipPath = current.toPath().resolve(zipFileName);
+        Path zipPath = current.toPath().resolve(zipFileName);
 
-         try {
-             FileOutputStream fos = new FileOutputStream(zipPath.toFile());
-             ZipOutputStream zos = new ZipOutputStream(fos);
-
-
-             for(int i = 1; i < arguments.length; i++) {
-                 Path filePath = current.toPath().resolve(arguments[i]);
-
-                 if(!Files.exists(filePath)) {
-                     System.out.println("Warning: File not found - " + arguments[i]);
-                     continue;
-                 }
-
-                 if(Files.isDirectory(filePath)) {
-                     System.out.println("Warning: Skipping directory - " + arguments[i]);
-                     continue;
-                 }
+        try {
+            FileOutputStream fos = new FileOutputStream(zipPath.toFile());
+            ZipOutputStream zos = new ZipOutputStream(fos);
 
 
-                 ZipEntry zipEntry = new ZipEntry(arguments[i]);
-                 zos.putNextEntry(zipEntry);
+            for(int i = 1; i < arguments.length; i++) {
+                Path filePath = current.toPath().resolve(arguments[i]);
+
+                if(!Files.exists(filePath)) {
+                    System.out.println("Warning: File not found - " + arguments[i]);
+                    continue;
+                }
+
+                if(Files.isDirectory(filePath)) {
+                    System.out.println("Warning: Skipping directory - " + arguments[i]);
+                    continue;
+                }
 
 
-                 FileInputStream fis = new FileInputStream(filePath.toFile());
-                 byte[] buffer = new byte[1024];
-                 int length;
-                 while((length = fis.read(buffer)) > 0) {
-                     zos.write(buffer, 0, length);
-                 }
-
-                 fis.close();
-                 zos.closeEntry();
-             }
-
-             zos.close();
-             fos.close();
-             System.out.println("Archive created: " + zipFileName);
-
-         } catch(IOException e) {
-             System.out.println("Error creating zip file: " + e.getMessage());
-         }
-     }
+                ZipEntry zipEntry = new ZipEntry(arguments[i]);
+                zos.putNextEntry(zipEntry);
 
 
-    public void chooseCommandAction() throws IOException {
+                FileInputStream fis = new FileInputStream(filePath.toFile());
+                byte[] buffer = new byte[1024];
+                int length;
+                while((length = fis.read(buffer)) > 0) {
+                    zos.write(buffer, 0, length);
+                }
+
+                fis.close();
+                zos.closeEntry();
+            }
+
+            zos.close();
+            fos.close();
+            System.out.println("Archive created: " + zipFileName);
+
+        } catch(IOException e) {
+            System.out.println("Error creating zip file: " + e.getMessage());
+        }
+    }
+    public void unzip(String[] arguments) {
+        if(arguments.length == 0) {
+            System.out.println("unzip requires a zip file");
+            return;
+        }
+
+        Path zipPath = current.toPath().resolve(arguments[0]);
+
+        if(!Files.exists(zipPath)) {
+            System.out.println("Zip file does not exist");
+            return;
+        }
+
+
+        Path destDir = current.toPath();
+        if(arguments.length == 3 && arguments[1].equals("-d")) {
+            destDir = current.toPath().resolve(arguments[2]);
+        }
+
+        try {
+            FileInputStream fis = new FileInputStream(zipPath.toFile());
+            ZipInputStream zis = new ZipInputStream(fis);
+            ZipEntry entry;
+
+
+            while((entry = zis.getNextEntry()) != null) {
+                Path filePath = destDir.resolve(entry.getName());
+
+                if(entry.isDirectory()) {
+                    Files.createDirectories(filePath);
+                } else {
+
+                    Files.createDirectories(filePath.getParent());
+
+
+                    FileOutputStream fos = new FileOutputStream(filePath.toFile());
+                    byte[] buffer = new byte[1024];
+                    int length;
+                    while((length = zis.read(buffer)) > 0) {
+                        fos.write(buffer, 0, length);
+                    }
+                    fos.close();
+                }
+
+                zis.closeEntry();
+            }
+
+            zis.close();
+            fis.close();
+            System.out.println("Archive extracted successfully");
+
+        } catch(IOException e) {
+            System.out.println("Error extracting zip file: " + e.getMessage());
+        }
+    }
+
+
+
+    public Boolean writeInFile(String[] input, File file) {
+        try {
+
+            if (!file.exists()) file.createNewFile();
+
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(file, false))) {
+                for (String line : input) {
+                    bw.write(line);
+                    bw.newLine();
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+    public Boolean appendToFile(String[] input, File file) {
+        try {
+
+            if (!file.exists()) file.createNewFile();
+
+            try (BufferedWriter bw = new BufferedWriter(new FileWriter(file, true))) {
+                for (String line : input) {
+                    bw.write(line);
+                    bw.newLine();
+                }
+            }
+            return true;
+        } catch (IOException e) {
+            return false;
+        }
+    }
+
+
+
+    public void chooseCommandAction() {
         System.out.print("> ");
         String input = scanner.nextLine();
 
@@ -311,9 +473,9 @@ class Parser {
         } else if (parser.getCommandName().equals("mkdir")) {
             mkdir(parser.getArgs());
         } else if (parser.getCommandName().equals("rmdir")) {
-//            rmdir(parser.getArgs());
+            rmdir(parser.getArgs());
         } else if (parser.getCommandName().equals("touch")) {
-
+            touch(parser.getArgs());
         } else if (parser.getCommandName().equals("rm")) {
             String[] arguments = parser.getArgs();
             if (arguments.length == 1) {
@@ -338,7 +500,7 @@ class Parser {
             zip(parser.getArgs());
         }
         else if (parser.getCommandName().equals("unzip")) {
-           System.out.println("unzip");
+            unzip(parser.getArgs());
         }
         else if (parser.getCommandName().equals("exit")){
             System.out.println("Bye");
@@ -357,5 +519,3 @@ class Parser {
 
     }
 }
-
-
