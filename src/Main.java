@@ -1,3 +1,4 @@
+package CLI;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -8,6 +9,7 @@ import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
 import java.util.zip.ZipInputStream;
+
 
 class Parser {
     String commandName;
@@ -91,9 +93,10 @@ class Terminal {
         String[] res = new String[files.length];
         for (int i = 0; i < files.length; i++) {
             if (files[i].isDirectory()) {
-
+                System.out.println("[DIR]  " + files[i].getName());
                 res[i] = "[DIR]  " + files[i].getName();
             } else {
+                System.out.println("       " + files[i].getName());
                 res[i] = "       " + files[i].getName();
             }
         }
@@ -145,7 +148,7 @@ class Terminal {
             if (!dir.isAbsolute()) {
                 dir = new File(current, args[0]);
             }
-
+            
             if (!dir.exists()) {
                 System.out.println("Directory does not exist");
             } else if (!dir.isDirectory()) {
@@ -234,7 +237,7 @@ class Terminal {
     public void cp(String[] arguments) {
         if(arguments.length != 2 && arguments.length !=3) {
             System.out.println("cp must followed by 2 or 3 filenames");
-            return;
+            return; 
         }
         if (arguments[0].equals("-r")) {
             if (arguments.length != 3) {
@@ -273,7 +276,7 @@ class Terminal {
             }
             return;
         }
-
+        
         else {
             Path Sourcepath = current.toPath().resolve(arguments[0]).normalize();
             if(Files.exists(Sourcepath)) {
@@ -295,6 +298,7 @@ class Terminal {
             }
         }
     }
+   
     public String[] wc(String[] arguments) {
         if(arguments.length == 0) {
             System.out.println("you must put filename");
@@ -344,111 +348,160 @@ class Terminal {
     }
 
     public void zip(String[] arguments) {
-        if(arguments.length < 2) {
-            System.out.println("zip requires at least 2 arguments: zip file.zip file1 file2");
+        if (arguments.length < 2) {
+            System.out.println("Usage:");
+            System.out.println("  zip archive.zip file1 file2 ...");
+            System.out.println("  zip -r archive.zip directory");
             return;
         }
 
-        String zipFileName = arguments[0];
-        if(!zipFileName.endsWith(".zip")) {
+        boolean recursive = false;
+        int startIndex = 1;
+        String zipFileName;
+
+        
+        if (arguments[0].equals("-r")) {
+            recursive = true;
+            if (arguments.length < 3) {
+                System.out.println("Ex zip -r archive.zip directory");
+                return;
+            }
+            zipFileName = arguments[1];
+            startIndex = 2;
+        } else {
+            zipFileName = arguments[0];
+        }
+
+        
+        if (!zipFileName.endsWith(".zip")) {
             zipFileName += ".zip";
         }
 
         Path zipPath = current.toPath().resolve(zipFileName);
 
-        try {
-            FileOutputStream fos = new FileOutputStream(zipPath.toFile());
-            ZipOutputStream zos = new ZipOutputStream(fos);
+        try (FileOutputStream fos = new FileOutputStream(zipPath.toFile());
+             ZipOutputStream zos = new ZipOutputStream(fos)) {
 
-            for(int i = 1; i < arguments.length; i++) {
-                Path filePath = current.toPath().resolve(arguments[i]);
+            for (int i = startIndex; i < arguments.length; i++) {
+                Path targetPath = current.toPath().resolve(arguments[i]).normalize();
 
-                if(!Files.exists(filePath)) {
-                    System.out.println("Warning: File not found - " + arguments[i]);
+                if (!Files.exists(targetPath)) {
+                    System.out.println("Warning: File or directory not found - " + arguments[i]);
                     continue;
                 }
 
-                if(Files.isDirectory(filePath)) {
-                    System.out.println("Warning: Skipping directory - " + arguments[i]);
-                    continue;
+               
+                final String baseName = arguments[i];
+
+                if (Files.isDirectory(targetPath)) {
+                    if (!recursive) {
+                        System.out.println("Skipping directory (use -r to include): " + baseName);
+                        continue;
+                    }
+
+                   
+                    try (java.util.stream.Stream<Path> stream = Files.walk(targetPath)) {
+                        stream.forEach(path -> {
+                            try {
+                                Path relPath = targetPath.relativize(path);
+                                String entryName = baseName + "/" + relPath.toString().replace("\\", "/");
+
+                                if (Files.isDirectory(path)) {
+                                    
+                                    if (!entryName.endsWith("/")) entryName += "/";
+                                    zos.putNextEntry(new ZipEntry(entryName));
+                                    zos.closeEntry();
+                                } else {
+                                    zos.putNextEntry(new ZipEntry(entryName));
+                                    Files.copy(path, zos);
+                                    zos.closeEntry();
+                                }
+                            } catch (IOException e) {
+                                System.out.println("Error adding file: " + path + " -> " + e.getMessage());
+                            }
+                        });
+                    }
+                } else {
+                    
+                    String entryName = targetPath.getFileName().toString();
+                    try {
+                        zos.putNextEntry(new ZipEntry(entryName));
+                        Files.copy(targetPath, zos);
+                        zos.closeEntry();
+                    } catch (IOException e) {
+                        System.out.println("Error adding file: " + entryName + " -> " + e.getMessage());
+                    }
                 }
-
-                ZipEntry zipEntry = new ZipEntry(arguments[i]);
-                zos.putNextEntry(zipEntry);
-
-                FileInputStream fis = new FileInputStream(filePath.toFile());
-                byte[] buffer = new byte[1024];
-                int length;
-                while((length = fis.read(buffer)) > 0) {
-                    zos.write(buffer, 0, length);
-                }
-
-                fis.close();
-                zos.closeEntry();
             }
 
-            zos.close();
-            fos.close();
             System.out.println("Archive created: " + zipFileName);
 
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("Error creating zip file: " + e.getMessage());
         }
     }
 
+
     public void unzip(String[] arguments) {
-        if(arguments.length == 0) {
-            System.out.println("unzip requires a zip file");
+        if (arguments.length == 0) {
+            System.out.println("Usage:");
+            System.out.println("  unzip archive.zip");
+            System.out.println("  unzip archive.zip -d /path/to/destination/");
             return;
         }
 
-        Path zipPath = current.toPath().resolve(arguments[0]);
+        Path zipPath = current.toPath().resolve(arguments[0]).normalize();
 
-        if(!Files.exists(zipPath)) {
-            System.out.println("Zip file does not exist");
+        if (!Files.exists(zipPath)) {
+            System.out.println("Zip file does not exist: " + zipPath);
             return;
         }
 
-        Path destDir = current.toPath();
-        if(arguments.length == 3 && arguments[1].equals("-d")) {
-            destDir = current.toPath().resolve(arguments[2]);
-        }
+        Path destDir = current.toPath(); 
 
-        try {
-            FileInputStream fis = new FileInputStream(zipPath.toFile());
-            ZipInputStream zis = new ZipInputStream(fis);
+        
+        if (arguments.length >= 3 && arguments[1].equals("-d")) {
+            String destPathArg = arguments[2];
+            File destFile = new File(destPathArg);
+
+            
+            if (!destFile.isAbsolute()) {
+                destDir = current.toPath().resolve(destPathArg).normalize();
+            } else {
+                destDir = destFile.toPath();
+            }}
+        
+
+        try (ZipInputStream zis = new ZipInputStream(new FileInputStream(zipPath.toFile()))) {
             ZipEntry entry;
-
-            while((entry = zis.getNextEntry()) != null) {
+            while ((entry = zis.getNextEntry()) != null) {
                 Path filePath = destDir.resolve(entry.getName());
 
-                if(entry.isDirectory()) {
+                if (entry.isDirectory()) {
                     Files.createDirectories(filePath);
                 } else {
                     Files.createDirectories(filePath.getParent());
-
-                    FileOutputStream fos = new FileOutputStream(filePath.toFile());
-                    byte[] buffer = new byte[1024];
-                    int length;
-                    while((length = zis.read(buffer)) > 0) {
-                        fos.write(buffer, 0, length);
-                    }
-                    fos.close();
-                }
+                    try (FileOutputStream fos = new FileOutputStream(filePath.toFile())) {
+                        byte[] buffer = new byte[1024];
+                        int length;
+                        while ((length = zis.read(buffer)) > 0) {
+                            fos.write(buffer, 0, length);
+                        }
+                    }}
+                
 
                 zis.closeEntry();
             }
 
-            zis.close();
-            fis.close();
-            System.out.println("Archive extracted successfully");
+            System.out.println("Archive extracted successfully to: " + destDir);
 
-        } catch(IOException e) {
+        } catch (IOException e) {
             System.out.println("Error extracting zip file: " + e.getMessage());
         }
     }
 
-    public void writeInFile(String[] input, File file) {
+
+    public Boolean writeInFile(String[] input, File file) {
         try {
             if (!file.exists()) file.createNewFile();
 
@@ -458,11 +511,13 @@ class Terminal {
                     bw.newLine();
                 }
             }
+            return true;
         } catch (IOException e) {
+            return false;
         }
     }
 
-    public void appendToFile(String[] input, File file) {
+    public Boolean appendToFile(String[] input, File file) {
         try {
             if (!file.exists()) file.createNewFile();
 
@@ -472,33 +527,36 @@ class Terminal {
                     bw.newLine();
                 }
             }
+            return true;
         } catch (IOException e) {
+            return false;
         }
     }
 
+   
     public void handleRedirect(String input) {
         boolean isAppend = input.contains(">>");
         String[] parts = input.split(isAppend ? ">>" : ">");
-
+        
         if (parts.length != 2) {
-            System.out.println("Invalid redirect syntax");
+            System.out.println("Invalid  syntax");
             return;
         }
-
+        
         String command = parts[0].trim();
         String filename = parts[1].trim();
         File outputFile = new File(current, filename);
-
-
+        
+        
         if (!parser.parse(command)) {
             System.out.println("Invalid command");
             return;
         }
-
+        
         String[] args = parser.getArgs();
         String[] output = null;
-
-
+        
+        
         switch (parser.getCommandName()) {
             case "pwd":
                 output = new String[]{pwd()};
@@ -516,8 +574,8 @@ class Terminal {
                 System.out.println("Command not supported for redirection");
                 return;
         }
-
-
+        
+        
         if (output != null && output.length > 0) {
             if (isAppend) {
                 appendToFile(output, outputFile);
@@ -535,18 +593,20 @@ class Terminal {
         if (input == null || input.trim().isEmpty()) {
             return;
         }
-
+        
+       
         if (input.contains(">>") || input.contains(">")) {
             handleRedirect(input);
             return;
         }
+
         if (!parser.parse(input)){
             System.out.println("Invalid command");
             return;
         }
 
         String[] arguments = parser.getArgs();
-
+        
         switch (parser.getCommandName()) {
             case "pwd":
                 System.out.println(pwd());
@@ -555,11 +615,7 @@ class Terminal {
                 cd(arguments);
                 break;
             case "ls":
-                String[] output = ls();
-                for(String line : output)
-                {
-                    System.out.println(line);
-                }
+                ls();
                 break;
             case "mkdir":
                 mkdir(arguments);
@@ -601,7 +657,7 @@ class Terminal {
         }
     }
 
-    public static void main(String[] args)  {
+    public static void main(String[] args) throws IOException {
         Terminal terminal = new Terminal();
         while(true){
             terminal.chooseCommandAction();
