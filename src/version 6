@@ -3,6 +3,7 @@ package CLI;
 import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.Arrays;
 import java.util.Scanner;
 import java.util.zip.ZipEntry;
@@ -234,9 +235,48 @@ class Terminal {
     }
 
     public void cp(String[] arguments) {
-        if(arguments.length != 2) {
-            System.out.println("cp must followed by 2 filenames");
-        } else {
+        if(arguments.length != 2 && arguments.length !=3) {
+            System.out.println("cp must followed by 2 or 3 filenames");
+        }
+        if (arguments[0].equals("-r")) {
+            if (arguments.length != 3) {
+                System.out.println("Usage: cp -r dir1 dir2");
+                return;
+            }
+
+            Path sourceDir = current.toPath().resolve(arguments[1]).normalize();
+            Path targetDir = current.toPath().resolve(arguments[2]).normalize();
+
+            if (!Files.exists(sourceDir)) {
+                System.out.println("Source directory does not exist");
+                return;
+            }
+            if (!Files.isDirectory(sourceDir)) {
+                System.out.println("Source is not a directory");
+                return;
+            }
+
+            try {
+                Files.walk(sourceDir).forEach(source -> {
+                    Path destination = targetDir.resolve(sourceDir.relativize(source));
+                    try {
+                        if (Files.isDirectory(source)) {
+                            Files.createDirectories(destination);
+                        } else {
+                            Files.copy(source, destination, StandardCopyOption.REPLACE_EXISTING);
+                        }
+                    } catch (IOException e) {
+                        System.out.println("Error copying: " + source.getFileName());
+                    }
+                });
+                System.out.println("Directory copied successfully");
+            } catch (IOException e) {
+                System.out.println("Error during recursive copy: " + e.getMessage());
+            }
+            return;
+        }
+        
+        else {
             Path Sourcepath = current.toPath().resolve(arguments[0]).normalize();
             if(Files.exists(Sourcepath)) {
                 Path targetpath = current.toPath().resolve(arguments[1]).normalize();
@@ -257,7 +297,7 @@ class Terminal {
             }
         }
     }
-
+   
     public String[] wc(String[] arguments) {
         if(arguments.length == 0) {
             System.out.println("you must put filename");
